@@ -1,3 +1,4 @@
+#include <cstring>
 #include <handlang/handlang.h>
 #include <omp/omp.h>
 #include "gpu_util.h"
@@ -13,7 +14,10 @@ static float* HAND_COMPATIBILITY = nullptr; // 1326x1326
 
 static void
 calc_hand_compatibility_once();
-    
+
+static void
+set_total_compatibility(const BoardCompatibilty& board_compatibility, float* total_compatibility);
+   
 static void
 calc_ranking(const Board& board, float* out);
 
@@ -30,8 +34,11 @@ Calculator::Calculator(IO* io, const Params& params)
 {
     calc_hand_compatibility_once();
     board_compatibility = calc_board_compatibility(io->board);
+    total_compatibility = (float*)std::malloc(1326*1326*sizeof(float));
+    set_total_compatibility(board_compatibility, total_compatibility);
     ranking = (float*)std::malloc(1326*1326*sizeof(float));
     calc_ranking(io->board, ranking);
+//    util::print_array(ranking+1325*1326, 1326);
 }
 
 
@@ -162,34 +169,35 @@ Calculator::calc_node_values(Node& node)
 Values
 Calculator::calc_node_values_cpu(const Weights& opponent_weights, float pot, float cost, int exp) 
 {
-    const int m = 1; 
-    const int n = 1326; 
+    const int m = 1326; 
+    const int n = 1; 
     const int k = 1326;
     const float* W = &opponent_weights[0];
     const float* R = ranking;
-    const float* C = HAND_COMPATIBILITY;
+    const float* C = total_compatibility;
     float A[1326];
     float B[1326];
     Values values;
     // Row-major matrix multiplications
     // W R = A (sum of weighted gains -- by opponent weights)
     // 1x1326 * 1136x1326  = 1x1326
-    util::matmul_rowmajor<m, n, k>(W, R, A);
+    util::matmul_rowmajor<m, n, k>(R, W, A);
     // W C = B (sum of opponent weights)
     // 1x1326 * 1326x1326 = 1x1326
-    util::matmul_rowmajor<m, n, k>(W, C, B);
+    util::matmul_rowmajor<m, n, k>(C, W, B);
     // V = (A had (1/B) * p - c
     for (int i = 0; i < 1326; i++) {
         float weightsum = B[i];
         float equity;
-        if (weightsum) {
-            equity = A[i]/weightsum;
-            values[i] = std::pow(equity, exp) * pot - cost;
+        
+        if (board_compatibility[i] == 0.0f) {
+            values[i] = NaN;
         } else {
-            if (board_compatibility[i]) {
-                values[i] = 0.0f;
+            if (weightsum) {
+                equity = A[i]/weightsum;
+                values[i] = std::pow(equity, exp) * pot - cost;
             } else {
-                values[i] = NaN;
+                values[i] = 0.0f;
             }
         }
     }
@@ -233,7 +241,6 @@ Calculator::calc_node_values_gpu(const Weights& opponent_weights, float pot, flo
 Values
 Calculator::calc_node_values_montecarlo(const Weights& hero_range, const std::vector<Weights>& opponent_ranges, float pot, float cost)
 {
-    std::cout << "in mc" << std::endl;
     std::array<double,1326> equities = omp::calc_equity_distr(
             io->board.data(),
             hero_range, 
@@ -281,6 +288,20 @@ calc_hand_compatibility_once()
 
 
 static void
+set_total_compatibility(const BoardCompatibilty& board_compatibility, float* total_compatibility)
+{
+    std::memcpy(total_compatibility, HAND_COMPATIBILITY, 1326*1326*sizeof(float));
+    for (int i = 0; i < 1326; i++) {
+        for (int j = 0; j < 1326; j++) {
+            if (board_compatibility[j] == 0.0f) {
+                *(total_compatibility + i*1326 + j) = 0.0f;
+            } 
+        }
+    }
+}
+
+
+static void
 calc_ranking(const Board& board, float* ranking) 
 {
     // Calc ranks
@@ -312,15 +333,23 @@ calc_ranking(const Board& board, float* ranking)
     for (int hero_hi = 0; hero_hi < 1326; hero_hi++) {
         hero_rank = ranks[hero_hi];
         for (int opp_hi = 0; opp_hi < 1326; opp_hi++) {
+            if (hero_rank == 0) { // hero's hand is incompatible with the board
+                *(ranking + hero_hi*1326 + opp_hi) = 0.0f; 
+                continue;
+            }
+            if (*(HAND_COMPATIBILITY + hero_hi*1326 + opp_hi) == 0.0) { // hero's hand is incompatible with opponent's hand
+                *(ranking + hero_hi*1326 + opp_hi) = 0.0f; 
+                continue;
+            }
             opp_rank = ranks[opp_hi];
+            if (opp_rank == 0) { // opponent's hand is incompatible with the board
+                *(ranking + hero_hi*1326 + opp_hi) = 0.0f; 
+                continue;
+            }
             if (hero_rank > opp_rank) {
                 *(ranking + hero_hi*1326 + opp_hi) = 1.0f;
             } else if (hero_rank == opp_rank) {
-                if (hero_rank == 0) { // incompatible hands don't add up to ev
-                    *(ranking + hero_hi*1326 + opp_hi) = 0.0f; 
-                } else {
-                    *(ranking + hero_hi*1326 + opp_hi) = 0.5f;
-                }
+                *(ranking + hero_hi*1326 + opp_hi) = 0.5f;
             } else {
                 *(ranking + hero_hi*1326 + opp_hi) = 0.0f;
             }

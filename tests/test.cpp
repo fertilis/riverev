@@ -19,10 +19,15 @@ void try_mc() {
     params.always_montecarlo = false;
 
     Calculator calc(&io, params);
-
     calc.calc_showdown_values();
-    
     util::print_array(node.valueset[0], 1326);
+    std::cout << std::endl;
+    
+    params.always_montecarlo = true;
+    Calculator calc2(&io, params);
+    calc2.calc_showdown_values();
+    util::print_array(node.valueset[0], 1326);
+    
 }
 
 

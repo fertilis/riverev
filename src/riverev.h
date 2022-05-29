@@ -45,6 +45,7 @@ private:
     IO* io;
     Params params;
     
+    float* total_compatibility = nullptr; // 1326x1326
     float* ranking = nullptr; // 1326x1326
     BoardCompatibilty board_compatibility;
     
