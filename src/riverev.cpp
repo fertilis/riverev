@@ -38,7 +38,6 @@ Calculator::Calculator(IO* io, const Params& params)
     set_total_compatibility(board_compatibility, total_compatibility);
     ranking = (float*)std::malloc(1326*1326*sizeof(float));
     calc_ranking(io->board, ranking);
-//    util::print_array(ranking+1325*1326, 1326);
 }
 
 
@@ -99,7 +98,7 @@ Calculator::setup_gpu()
     util::gpu::cu_cudaMalloc((void**)&gpu_buffer, buffer_size);
     util::gpu::cu_cudaMemcpy_HD(
             gpu_buffer + hand_compatibility_offset, 
-            HAND_COMPATIBILITY, 
+            total_compatibility, 
             hand_compatibility_size);
     util::gpu::cu_cudaMemcpy_HD(
             gpu_buffer + board_compatibility_offset, 
@@ -253,7 +252,7 @@ Calculator::calc_node_values_montecarlo(const Weights& hero_range, const std::ve
             values[i] = NaN;
         } else {
             float equity = equities[i];
-            if (equity < 0.0f) {
+            if (equity < 0.0f) { // incompatibility with opponent range, e.g on AsTc8d8h3s 8s6c vs 88
                 values[i] = 0.0f;
             } else {
                 values[i] = equity * pot - cost;

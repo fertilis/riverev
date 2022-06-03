@@ -43,7 +43,7 @@ cublasHandle_t HANDLES[2] = {0};
 
 
 size_t get_device_handle(int device) {
-    return (size_t)HANDLES[device];
+    return reinterpret_cast<size_t>(HANDLES[device]);
 }
 
 

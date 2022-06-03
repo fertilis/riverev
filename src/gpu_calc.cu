@@ -21,10 +21,46 @@
 #define checkcublaserr(stat) \
     do { \
         if (stat != CUBLAS_STATUS_SUCCESS) { \
-            fprintf (stderr, "CUBLAS failed: %s:%d\n", __FILE__, __LINE__); \
+            fprintf (stderr, "CUBLAS failed: %s:%d error: %s\n", __FILE__, __LINE__, _cudaGetErrorEnum(stat)); \
             exit(1); \
         } \
     } while (0)
+
+
+static const char *_cudaGetErrorEnum(cublasStatus_t error)
+{
+    switch (error)
+    {
+        case CUBLAS_STATUS_SUCCESS:
+            return "CUBLAS_STATUS_SUCCESS";
+
+        case CUBLAS_STATUS_NOT_INITIALIZED:
+            return "CUBLAS_STATUS_NOT_INITIALIZED";
+
+        case CUBLAS_STATUS_ALLOC_FAILED:
+            return "CUBLAS_STATUS_ALLOC_FAILED";
+
+        case CUBLAS_STATUS_INVALID_VALUE:
+            return "CUBLAS_STATUS_INVALID_VALUE";
+
+        case CUBLAS_STATUS_ARCH_MISMATCH:
+            return "CUBLAS_STATUS_ARCH_MISMATCH";
+
+        case CUBLAS_STATUS_NOT_SUPPORTED:
+            return "CUBLAS_STATUS_NOT_SUPPORTED";
+
+        case CUBLAS_STATUS_MAPPING_ERROR:
+            return "CUBLAS_STATUS_MAPPING_ERROR";
+
+        case CUBLAS_STATUS_EXECUTION_FAILED:
+            return "CUBLAS_STATUS_EXECUTION_FAILED";
+
+        case CUBLAS_STATUS_INTERNAL_ERROR:
+            return "CUBLAS_STATUS_INTERNAL_ERROR";
+    }
+
+    return "<unknown>";
+}
 
 
 
@@ -42,14 +78,14 @@ k_calc_value(
     if (hand_index < 1326) {
         float weightsum = weightsums[hand_index];
         float equity;
-        if (weightsum) {
-            equity = gainsums[hand_index]/weightsum;
-            values[hand_index] = powf(equity, exp) * pot - cost;
+        if (board_compatibility[hand_index] == 0.0f) {
+            values[hand_index] = CUDA_NAN;
         } else {
-            if (board_compatibility[hand_index]) {
-                values[hand_index] = 0.0f;
+            if (weightsum) {
+                equity = gainsums[hand_index]/weightsum;
+                values[hand_index] = powf(equity, exp) * pot - cost;
             } else {
-                values[hand_index] = CUDA_NAN;
+                values[hand_index] = 0.0f;
             }
         }
     }
@@ -60,10 +96,10 @@ namespace riverev::gpucalc {
 
 void
 calc_node_values(
-        const float* hand_compatibility,
-        const float* board_compatibility,
-        const float* ranking,
-        const float* opponent_weights,
+        const float* hand_compatibility, // C
+        const float* board_compatibility, // b
+        const float* ranking, // R
+        const float* opponent_weights, // W
         const float pot,
         const float cost,
         const float exp,
@@ -75,11 +111,12 @@ calc_node_values(
     const float beta = 0.0f;
 
     cublasStatus_t stat;
-    cublasGemmAlgo_t algo = CUBLAS_GEMM_ALGO1;
+    //cublasGemmAlgo_t algo = CUBLAS_GEMM_ALGO1;
+    cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
     
     int device;
     cudaGetDevice(&device);
-    cublasHandle_t handle = (cublasHandle_t)util::gpu::get_device_handle(device);
+    cublasHandle_t handle = reinterpret_cast<cublasHandle_t>(util::gpu::get_device_handle(device));
         
     int m = 1326, n = 1, k = 1326;
     const void* L;
@@ -92,7 +129,7 @@ calc_node_values(
     P = (void*)(gainsums);
     stat = cublasGemmEx(
         handle, 
-        CUBLAS_OP_N, CUBLAS_OP_N, 
+        CUBLAS_OP_T, CUBLAS_OP_N, 
         m, n, k, 
         &alpha, 
         L, CUDA_R_32F, m, 
@@ -110,7 +147,7 @@ calc_node_values(
     P = (void*)(weightsums);
     stat = cublasGemmEx(
         handle, 
-        CUBLAS_OP_N, CUBLAS_OP_N, 
+        CUBLAS_OP_T, CUBLAS_OP_N, 
         m, n, k, 
         &alpha, 
         L, CUDA_R_32F, m, 

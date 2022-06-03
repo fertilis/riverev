@@ -3,7 +3,7 @@ VERSION = 1.0.0
 
 SSE4=1
 CXX=g++-11
-CXXFLAGS += -O3 -std=gnu++2b -Wall -Wpedantic -fPIC -Ideps -g
+CXXFLAGS += -O3 -std=gnu++2b -Wall -Wpedantic -fPIC -Ideps
 LINK = deps/omp/omp.a deps/handlang/handlang.a -L/usr/local/cuda/lib64 -lcublas -lcudart
 
 ifdef SYSTEMROOT
@@ -25,7 +25,7 @@ CPP_OBJECTS := $(filter-out _build/pyport.o, $(OBJECTS))
 CUDA_OBJECTS := _build/gpu_util.o _build/gpu_calc.o
 
 
-all: dirs $(CUDA_OBJECTS) $(OBJECTS) $(PROJECT).a #py$(PROJECT).a py$(PROJECT).so
+all: dirs $(CUDA_OBJECTS) $(OBJECTS) $(PROJECT).a py$(PROJECT).a py$(PROJECT).so
 
 .PHONY: all tests
 

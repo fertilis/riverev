@@ -2,12 +2,16 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 namespace util {
 
 template <typename T>
 inline bool almost_equal(const T& v1, const T& v2, const T& tol) 
 {
+    if (std::isnan(v1) && std::isnan(v2)) {
+        return true;
+    }
     return std::abs(v1-v2) < tol;
 }
 
@@ -15,6 +19,9 @@ inline bool almost_equal(const T& v1, const T& v2, const T& tol)
 template <typename T>
 inline T round_to(const T value, int precision) 
 {
+    if (std::isnan(value)) {
+        return value;
+    }
     double mul = std::pow(10, precision);
     return (T)((int)(value*mul + 0.5) ) / mul;
 }
