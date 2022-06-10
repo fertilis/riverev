@@ -3,7 +3,8 @@
 #include <limits>
 #include <vector>
 #include <array>
-#include "evio.h"
+
+#include <evio/evio.h>
 
 
 namespace riverev {

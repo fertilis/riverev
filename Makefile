@@ -40,7 +40,6 @@ $(OBJECTS):
 $(PROJECT).a: $(CPP_OBJECTS) $(CUDA_OBJECTS)
 	ar rcs _dist/$(PROJECT)/$(PROJECT).a $^
 	cp src/$(PROJECT).h _dist/$(PROJECT)/
-	cp src/evio.h _dist/$(PROJECT)/
 	echo $(VERSION) > _dist/$(PROJECT)/_version
 	echo $(VERSION) > py/_version
 

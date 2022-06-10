@@ -1,22 +1,15 @@
 from ctypes import (
+    cdll,
     Structure,
     c_void_p,
-    c_ubyte,
     c_int,
-    c_float,
     c_bool,
     c_uint,
     POINTER,
     cast,
 )
 import numpy as np
-import ctypes
 import os
-
-import sys
-#np.set_printoptions(threshold=sys.maxsize)
-
-import handlang as hl
 
     
 class _StructureWrap:
@@ -39,28 +32,7 @@ class _StructureWrap:
         else:
             object.__setattr__(self, name, value)
         
-        
 
-class _Player(Structure):
-    _fields_ = [
-        ('position', c_int),
-        ('pot', c_float),
-        ('cost', c_float),
-    ]
-    
-    
-class _Node(Structure):
-    _fields_ = [
-        ('_weightset', c_float*10*1326),
-        ('_valueset', c_float*10*1326),
-    ]
-        
-class _IO(Structure):
-    _fields_ = [
-        ('board', c_ubyte*5),
-    ]
-    
-    
 class _Params(Structure):
     _fields_ = [
         ('use_gpu', c_bool),
@@ -72,57 +44,6 @@ class _Params(Structure):
     ]
     
     
-class Player(_StructureWrap): pass
-    
-
-class Node(_StructureWrap):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.active_players = []
-        
-    def add_player(self)->Player:
-        _lib.add_player(self._getptr())
-        index = len(self.active_players)
-        ptr_getter = lambda index=index: (
-            cast(_lib.get_player(self._getptr(), index), POINTER(_Player))
-        )
-        player = Player(ptr_getter)
-        self.active_players.append(player)
-        return player
-    
-    @property
-    def weightset(self):
-        return np.frombuffer(
-            self._getptr().contents._weightset, np.float32).reshape((10, 1326))
-    
-    @property
-    def valueset(self):
-        return np.frombuffer(
-            self._getptr().contents._valueset, np.float32).reshape((10, 1326))
-        
-
-class IO:
-    def __init__(self, sboard:str):
-        vp = _lib.new_io()
-        self._pointer = cast(vp, POINTER(_IO))
-        for i, card in enumerate(hl.to_board(sboard)):
-            self._pointer.contents.board[i] = card
-        self.nodes = []
-        
-    def add_node(self)->Node:
-        _lib.add_node(self._pointer)
-        index = len(self.nodes)
-        ptr_getter = lambda index=index: (
-            cast(_lib.get_node(self._pointer, index), POINTER(_Node))
-        )
-        node = Node(ptr_getter)
-        self.nodes.append(node)
-        return node
-    
-    def __del__(self):
-        _lib.delete_io(self._pointer)
-    
-
 class Params(_StructureWrap):
     def __init__(self):
         vp = _lib.new_params()
@@ -135,8 +56,8 @@ class Params(_StructureWrap):
         
     
 class Calculator:
-    def __init__(self, io: IO, params: Params):
-        self._pointer = _lib.new_calculator(io._pointer, params._pointer)
+    def __init__(self, io: 'evio.IO', params: Params):
+        self._pointer = _lib.new_calculator(io.pointer, params._pointer)
     
     def __del__(self):
         _lib.delete_calculator(self._pointer)
@@ -155,27 +76,15 @@ def _init_lib():
     if _lib is not None:
         return
     path = os.path.abspath(__file__+'/../_riverev.so')
-    _lib = ctypes.cdll.LoadLibrary(path)
+    _lib = cdll.LoadLibrary(path)
     
     _lib.new_params.argtypes = []
     _lib.new_params.restype = c_void_p
     _lib.delete_params.argtypes = [c_void_p]
     
-    _lib.new_io.argtypes = []
-    _lib.new_io.restype = c_void_p
-    _lib.delete_io.argtypes = [c_void_p]
-    
     _lib.new_calculator.argtypes = []
     _lib.new_calculator.restype = c_void_p
     _lib.delete_calculator.argtypes = [c_void_p]
-    
-    _lib.add_node.argtypes = [c_void_p]
-    _lib.get_node.argtypes = [c_void_p, c_int]
-    _lib.get_node.restype = c_void_p
-    
-    _lib.add_player.argtypes = [c_void_p]
-    _lib.get_player.argtypes = [c_void_p, c_int]
-    _lib.get_player.restype = c_void_p
     
     _lib.setup_gpu.argtypes = [c_void_p]
     _lib.calc_showdown_values.argtypes = [c_void_p]
