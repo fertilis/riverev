@@ -88,6 +88,9 @@ std::vector<TestCase> TEST_CASES = {
     {"AsTc8d8h3s", "88", "8s6c", 1.0, 0.0, 0.0},
     {"AsTc8d6h3s", "x22", "2s2c", 1.0, 0.0, 0.3804},
     {"AsTc8d8h3s", "88", "8s6c", 1.0, 0.0, 0.0},
+    {"Ac7sThKs7c", "(66+ AQJ xQJ) 22+ A72 x98", "2s2c", 1.0, 0.0, 0.2129},
+    {"Ac7sThKs7c", "AK", "AsKc", 1.0, 0.0, 0.5},
+    {"2c7sTh3s7c", "AK", "AsKc", 1.0, 0.0, 0.5},
 };
 
 std::vector<TestCase> TEST_CASES_SAME_BOARD = {
