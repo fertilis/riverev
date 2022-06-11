@@ -130,7 +130,9 @@ Calculator::calc_showdown_values()
         assert(gpu_is_set_up);
     }
     for (Node& node : io->nodes) {
-        calc_node_values(node);
+        if (node.active_players.size() >= 2) {
+            calc_node_values(node);
+        }
     }
 }
 
