@@ -42,6 +42,10 @@ Calculator::Calculator(IO* io, const Params& params)
 
 
 Calculator::~Calculator() {
+    if (total_compatibility) {
+        std::free(total_compatibility);
+        total_compatibility = nullptr;
+    }
     if (ranking) {
         std::free(ranking);
         ranking = nullptr;
