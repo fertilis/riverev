@@ -20,22 +20,22 @@ _build/test
 
 ```C++
 #include <iostream>
-#include <handlang/handlang.h>
-#include <riverev/riverev.h>
+#include <handlang/handlang.h> // hl
+#include <riverev/riverev.h> // riverev
 
 int main() {
-    Params params;
+    riverev::Params params;
     params.use_gpu = true;
 
-    IO io;
+    riverev::IO io;
     io.board = hl::to_board("AsTc8d6h3s");
-    Node& node = io.nodes.emplace_back();
+    riverev::Node& node = io.nodes.emplace_back();
     node.active_players.emplace_back(0, 1.0, 0.0);
     node.active_players.emplace_back(2, 1.0, 0.0);
     node.weightset[0] = hl::itof_range(hl::to_range("x22"));
     node.weightset[2] = hl::itof_range(hl::to_range("x22"));
 
-    Calculator calc(&io, params);
+    riverev::Calculator calc(&io, params);
     calc.setup_gpu();
     calc.calc_showdown_values();
     std::cout << node.valueset[hl::hand_index(hl::to_hand("8s5c"))] << std::endl; // 0.6282
