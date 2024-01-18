@@ -1,8 +1,6 @@
 _build
-_dist
 .py[cod]
 __pycache__/
 core
-_version
-py/*.so
-/deps
+*.so
+*.egg-info/

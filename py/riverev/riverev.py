@@ -8,7 +8,8 @@ from ctypes import (
     POINTER,
     cast,
 )
-import numpy as np
+import ctypes
+import evio
 import os
 
     
@@ -56,7 +57,7 @@ class Params(_StructureWrap):
         
     
 class Calculator:
-    def __init__(self, io: 'evio.IO', params: Params):
+    def __init__(self, io: evio.IO, params: Params):
         self._pointer = _lib.new_calculator(io.pointer, params._pointer)
     
     def __del__(self):
@@ -70,11 +71,7 @@ class Calculator:
 
 
 
-_lib = None
-def _init_lib():
-    global _lib
-    if _lib is not None:
-        return
+def _init_lib() -> ctypes.CDLL:
     path = os.path.abspath(__file__+'/../_riverev.so')
     _lib = cdll.LoadLibrary(path)
     
@@ -88,5 +85,6 @@ def _init_lib():
     
     _lib.setup_gpu.argtypes = [c_void_p]
     _lib.calc_showdown_values.argtypes = [c_void_p]
+    return _lib
     
-_init_lib()
+_lib: ctypes.CDLL = _init_lib()

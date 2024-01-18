@@ -6,6 +6,23 @@ If there are more than one opponent and their ranges are quite narrow, monte-car
 
 GPU calculations are about 20 times faster than on CPU.
 
+## Dependencies
+
+Build: `libevio.a`, `libhandlang.a`, `libomp.a`, cuda sdk (`nvcc`)
+
+To install cuda sdk on ubuntu 22.04 (3.5 Gb download):
+
+```
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb -P /tmp  || exit 1
+sudo dpkg -i /tmp/cuda-keyring_1.1-1_all.deb || exit 1
+sudo apt update || exit 1
+sudo apt install -y cuda || exit 1
+add_to_bashrc "add_to_path /usr/local/cuda/bin"
+add_to_bashrc "add_to_ld_library_path /usr/local/cuda-12.2/lib64"
+```
+
+Runtime: `libcublas`, `libcudart`
+
 ## Build
 
 ```bash
