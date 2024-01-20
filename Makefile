@@ -11,6 +11,8 @@ DYNAMIC_LINKS := -L/usr/local/cuda/lib64 -lcudart -lcublas
 TEST_LINKS := $(STATIC_LIB) -L$(LINK_DIR) -lhandlang -lomp -levio $(DYNAMIC_LINKS)
 SOURCES := $(wildcard src/*.cpp)
 OBJECTS := $(SOURCES:src/%.cpp=_build/%.o)
+OBJECTS := $(filter-out _build/pyport.o, $(OBJECTS))
+PORT_OBJECT := _build/pyport.o
 INCLUDES := _build/include/$(PROJECT)/riverev.h
 CUDA_OBJECTS := _build/gpu_util.o _build/gpu_calc.o
 
@@ -21,7 +23,7 @@ all: check_dependencies dirs $(STATIC_LIB) $(DYNAMIC_LIB) $(INCLUDES)
 check_dependencies:
 	@if [ ! -f $(LINK_DIR)/libhandlang.a ]; then exit 1; fi
 	@if [ ! -f $(LINK_DIR)/libomp.a ]; then exit 1; fi
-	@if [ ! -f $(LINK_DIR)/libevio.a ]; then exit 1; fi
+	@if [ ! -f $(INCLUDE_DIR)/evio/evio.h ]; then exit 1; fi
 	@if [ ! -f /usr/local/cuda/lib64/libcudart.so ]; then exit 1; fi
 	@if [ ! -f /usr/local/cuda/lib64/libcublas.so ]; then exit 1; fi
 	
@@ -44,18 +46,21 @@ $(STATIC_LIB): $(OBJECTS) $(CUDA_OBJECTS)
 _build/include/$(PROJECT)/%.h: src/%.h
 	cp $< $@
 	
-$(DYNAMIC_LIB): $(STATIC_LIB)
-	@echo $(LD_LIBRARY_PATH)
-	gcc -Wl,--whole-archive $< \
+$(DYNAMIC_LIB): $(STATIC_LIB) $(PORT_OBJECT)
+	gcc $(PORT_OBJECT) \
+		-Wl,--whole-archive \
+		$(STATIC_LIB) \
 		$(LINK_DIR)/libhandlang.a \
 		$(LINK_DIR)/libomp.a \
-		$(LINK_DIR)/libevio.a \
 		-Wl,--no-whole-archive \
 		$(DYNAMIC_LINKS) \
+		-I$(INCLUDE_DIR) \
 		-o $@ -shared -fPIC -I/usr/include/python$(PYTHON_VERSION)  -lstdc++
 
 clean:
 	rm -rf _build $(DYNAMIC_LIB)
+	rm -rf py/*.egg-info
+	rm -rf py/$(PROJECT)/__pycache__
 
 
 tests:
