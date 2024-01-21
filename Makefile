@@ -1,5 +1,5 @@
 PROJECT := riverev
-PYTHON_VERSION ?= 3.12
+PYTHON_VERSION ?= 3.10
 GPP_VERSION ?= 11
 INCLUDE_DIR ?= $(shell pwd)/../../dist/include
 LINK_DIR ?= $(shell pwd)/../../dist/lib
